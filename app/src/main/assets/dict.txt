@@ -1,6 +1,6 @@
 affenpinscher
 afghan hound
-african hunting dog
+african hunting_dog
 airedale
 american staffordshire terrier
 appenzeller
@@ -41,7 +41,7 @@ english foxhound
 english setter
 english springer
 entlebucher
-eskimo dog
+eskimo_dog
 flat_coated retriever
 french bulldog
 german shepherd
@@ -93,7 +93,7 @@ rhodesian ridgeback
 rottweiler
 saint bernard
 saluki
-dire wolf
+samoyed
 schipperke
 scotch terrier
 scottish deerhound
