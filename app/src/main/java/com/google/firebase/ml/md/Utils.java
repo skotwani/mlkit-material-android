@@ -36,9 +36,20 @@ import android.graphics.RectF;
 import android.hardware.Camera;
 import android.net.Uri;
 import android.util.Log;
+import android.widget.Toast;
+
 import androidx.core.app.ActivityCompat;
 import androidx.exifinterface.media.ExifInterface;
+
+import com.google.firebase.ml.common.modeldownload.FirebaseLocalModel;
+import com.google.firebase.ml.common.modeldownload.FirebaseModelDownloadConditions;
+import com.google.firebase.ml.common.modeldownload.FirebaseModelManager;
+import com.google.firebase.ml.common.modeldownload.FirebaseRemoteModel;
 import com.google.firebase.ml.md.camera.CameraSizePair;
+import com.google.firebase.ml.vision.FirebaseVision;
+import com.google.firebase.ml.vision.label.FirebaseVisionImageLabeler;
+import com.google.firebase.ml.vision.label.FirebaseVisionOnDeviceAutoMLImageLabelerOptions;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -56,6 +67,8 @@ public class Utils {
   static final int REQUEST_CODE_PHOTO_LIBRARY = 1;
 
   private static final String TAG = "Utils";
+
+  public static final String PUBLISHED_MODEL_NAME = "dogs";
 
   static void requestRuntimePermissions(Activity activity) {
     List<String> allNeededPermissions = new ArrayList<>();
@@ -253,5 +266,51 @@ public class Utils {
     return exif !=  null
         ? exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
         : ExifInterface.ORIENTATION_UNDEFINED;
+  }
+
+  public static FirebaseVisionImageLabeler loadAutoMLModel(String publishedModelName) {
+    FirebaseVisionImageLabeler labeler;
+
+    // TODO: Use this section to load a model published to ML Kit.
+    // Use the published model name when calling loadAutoMLModel.
+
+    /*
+    FirebaseRemoteModel remoteModel;
+    FirebaseModelDownloadConditions conditions = new FirebaseModelDownloadConditions.Builder()
+            .requireWifi()
+            .build();
+
+    remoteModel = new FirebaseRemoteModel.Builder(publishedModelName)
+            .enableModelUpdates(true)
+            .setInitialDownloadConditions(conditions)
+            .setUpdatesDownloadConditions(conditions)
+            .build();
+    FirebaseModelManager.getInstance().registerRemoteModel(remoteModel);
+    */
+
+
+    FirebaseLocalModel localModel = new FirebaseLocalModel.Builder("my_local_model")
+            .setAssetFilePath("manifest.json")
+            .build();
+    FirebaseModelManager.getInstance().registerLocalModel(localModel);
+
+    // TODO: Update labelerOptions to also include the remote model.
+    FirebaseVisionOnDeviceAutoMLImageLabelerOptions labelerOptions =
+            new FirebaseVisionOnDeviceAutoMLImageLabelerOptions.Builder()
+                    .setLocalModelName("my_local_model")    // Skip to not use a local model
+//                    .setRemoteModelName(publishedModelName)  // Skip to not use a remote model
+                    .setConfidenceThreshold(0.1f)  // Increase threshold to trigger only on higher confidence results. e.g. 0.5 for 50%.
+                    .build();
+
+    try {
+      labeler = FirebaseVision.getInstance().getOnDeviceAutoMLImageLabeler(labelerOptions);
+      return labeler;
+    }
+    catch (com.google.firebase.ml.common.FirebaseMLException e) {
+      e.printStackTrace();
+    }
+
+    return null;
+
   }
 }

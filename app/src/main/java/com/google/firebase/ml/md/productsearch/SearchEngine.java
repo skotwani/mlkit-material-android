@@ -18,15 +18,37 @@ package com.google.firebase.ml.md.productsearch;
 
 import android.content.Context;
 import android.util.Log;
+import android.widget.Toast;
+
+import androidx.annotation.NonNull;
+
 import com.android.volley.RequestQueue;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Tasks;
+import com.google.firebase.ml.common.modeldownload.FirebaseModelDownloadConditions;
+import com.google.firebase.ml.common.modeldownload.FirebaseModelManager;
+import com.google.firebase.ml.common.modeldownload.FirebaseRemoteModel;
 import com.google.firebase.ml.md.objectdetection.DetectedObject;
+import com.google.firebase.ml.vision.FirebaseVision;
+import com.google.firebase.ml.vision.common.FirebaseVisionImage;
+import com.google.firebase.ml.vision.common.FirebaseVisionImageMetadata;
+import com.google.firebase.ml.vision.label.FirebaseVisionImageLabel;
+import com.google.firebase.ml.vision.label.FirebaseVisionImageLabeler;
+import com.google.firebase.ml.vision.label.FirebaseVisionOnDeviceAutoMLImageLabelerOptions;
+
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+
+import static com.google.firebase.ml.md.Utils.PUBLISHED_MODEL_NAME;
+import static com.google.firebase.ml.md.Utils.loadAutoMLModel;
 
 /** A fake search engine to help simulate the complete work flow. */
 public class SearchEngine {
@@ -46,34 +68,52 @@ public class SearchEngine {
   }
 
   public void search(DetectedObject object, SearchResultListener listener) {
-    // Crops the object image out of the full image is expensive, so do it off the UI thread.
-    Tasks.call(requestCreationExecutor, () -> createRequest(object))
-        .addOnSuccessListener(productRequest -> searchRequestQueue.add(productRequest.setTag(TAG)))
+      FirebaseVisionImageLabeler labeler = loadAutoMLModel(PUBLISHED_MODEL_NAME);
+
+      // TODO: Crops the object image out of the full image is expensive, so do it off the UI thread.
+    labeler.processImage(FirebaseVisionImage.fromBitmap(object.getBitmap()))
+            .addOnSuccessListener(labels -> {
+              try {
+                // Sort the labels by confidence
+                Collections.sort(labels, (lhs, rhs) -> {
+                  if(lhs.getConfidence() > rhs.getConfidence()) return -1;
+                  else if(lhs.getConfidence() < rhs.getConfidence()) return 1;
+                  else return 0;
+                });
+              }
+              catch (Exception e) {
+                e.printStackTrace();
+              }
+
+              if (labels.size()>0) {
+                FirebaseVisionImageLabel label = labels.get(labels.size()-1);
+                String text = label.getText();
+                float confidence = label.getConfidence();
+                Log.v(TAG, text + " " + confidence);
+              }
+
+              List<Product> objectList = new ArrayList<>();
+              for (int i = 0; i < labels.size(); i++) {
+                objectList.add(
+                        new Product(/* imageUrl= */ "", labels.get(i).getText(), "Confidence: " + labels.get(i).getConfidence()));
+              }
+              listener.onSearchCompleted(object, objectList);
+
+              // ...
+            })
         .addOnFailureListener(
             e -> {
               Log.e(TAG, "Failed to create product search request!", e);
               // Remove the below dummy code after your own product search backed hooked up.
               List<Product> productList = new ArrayList<>();
-              for (int i = 0; i < 8; i++) {
-                productList.add(
-                    new Product(/* imageUrl= */ "", "Product title " + i, "Product subtitle " + i));
-              }
+
               listener.onSearchCompleted(object, productList);
             });
-  }
-
-  private static JsonObjectRequest createRequest(DetectedObject searchingObject) throws Exception {
-    byte[] objectImageData = searchingObject.getImageData();
-    if (objectImageData == null) {
-      throw new Exception("Failed to get object image data!");
-    }
-
-    // Hooks up with your own product search backend here.
-    throw new Exception("Hooks up with your own product search backend.");
   }
 
   public void shutdown() {
     searchRequestQueue.cancelAll(TAG);
     requestCreationExecutor.shutdown();
   }
+
 }

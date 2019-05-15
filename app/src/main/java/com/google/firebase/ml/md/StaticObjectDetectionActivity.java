@@ -45,6 +45,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.firebase.ml.md.productsearch.BottomSheetScrimView;
 import com.google.firebase.ml.vision.FirebaseVision;
 import com.google.firebase.ml.vision.common.FirebaseVisionImage;
+import com.google.firebase.ml.vision.label.FirebaseVisionImageLabeler;
 import com.google.firebase.ml.vision.objects.FirebaseVisionObject;
 import com.google.firebase.ml.vision.objects.FirebaseVisionObjectDetector;
 import com.google.firebase.ml.vision.objects.FirebaseVisionObjectDetectorOptions;
@@ -59,6 +60,8 @@ import com.google.firebase.ml.md.productsearch.SearchedObject;
 import java.io.IOException;
 import java.util.List;
 import java.util.TreeMap;
+
+import static com.google.firebase.ml.md.Utils.loadAutoMLModel;
 
 /** Demonstrates the object detection and visual search workflow using static image. */
 public class StaticObjectDetectionActivity extends AppCompatActivity
